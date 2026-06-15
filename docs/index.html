@@ -173,6 +173,20 @@
     font-size:13.5px}
   .gcard .desc{color:var(--muted); font-size:13px; margin-top:4px}
 
+  /* supplement / pdf */
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap; margin:14px 0}
+  .dlbtn{font-family:var(--mono); font-size:12.5px; letter-spacing:.03em;
+    padding:9px 16px; border-radius:5px; border:1px solid var(--line-strong);
+    color:var(--ink); background:var(--card)}
+  .dlbtn:hover{border-color:var(--primary); color:var(--primary); text-decoration:none}
+  .dlbtn.primary{background:var(--primary); color:#fff; border-color:var(--primary)}
+  html[data-theme="dark"] .dlbtn.primary{color:#0f1822}
+  .pdfframe{border:1px solid var(--line-strong); border-radius:6px; overflow:hidden;
+    background:var(--code-bg); height:36rem; margin-top:6px}
+  .pdfframe object,.pdfframe iframe{width:100%; height:100%; border:0; display:block}
+  .pdfframe .fallback{display:flex; align-items:center; justify-content:center;
+    height:100%; padding:28px; text-align:center; color:var(--muted); font-size:14px}
+
   /* footer */
   footer{padding:40px 0 60px}
   footer .lic{border:1px solid var(--amber); border-radius:6px; padding:16px 18px;
@@ -188,6 +202,7 @@
     .grid2{grid-template-columns:1fr}
     .hero{padding:38px 0 30px}
     section.doc{padding:42px 0}
+    .pdfframe{height:28rem}
   }
 </style>
 </head>
@@ -215,6 +230,7 @@
     <a href="#results" data-sec="results">Results</a>
     <a href="#reproduce" data-sec="reproduce">Reproduce</a>
     <a href="#build" data-sec="build">Build</a>
+    <a href="#supplement" data-sec="supplement">Supplement</a>
     <a href="#cite" data-sec="cite">Cite</a>
   </div>
 </nav>
@@ -384,7 +400,7 @@ python figures/make_figures.py</code></pre>
       <div class="gcard"><div class="cmd">make GPU=a100</div><div class="desc">Ampere → sm_80 · A100</div></div>
       <div class="gcard"><div class="cmd">make ARCH=sm_70</div><div class="desc">Explicit compute-capability override</div></div>
       <div class="gcard"><div class="cmd">make sim</div><div class="desc">CPU / MATLAB path, no GPU required</div></div>
-      <div class="gcard"><div class="cmd">make figures</div><div class="desc">Rebuild all figures from results/</div></div>
+      <div class="gcard"><div class="cmd">make pages</div><div class="desc">Build docs/ (html + supplement.pdf)</div></div>
     </div>
     <p class="note" style="margin-top:16px">Unknown <span class="mono">GPU=</span>
       falls back to <span class="mono">sm_70</span> with a warning, so existing
@@ -392,10 +408,31 @@ python figures/make_figures.py</code></pre>
   </div>
 </section>
 
+<!-- supplement -->
+<section class="doc" id="supplement">
+  <div class="wrap">
+    <div class="eyebrow"><span class="no">05</span> Supplementary material</div>
+    <h2>Step-by-step growth-factor derivations</h2>
+    <p class="note">The supplement is the long-form companion to the method table
+      above: full per-step derivations of the growth law and of each policy's
+      bound. Read it inline or take the PDF.</p>
+    <div class="btnrow">
+      <a class="dlbtn primary" href="supplement.pdf" download>↓ Download PDF</a>
+      <a class="dlbtn" href="supplement.pdf" target="_blank" rel="noopener">Open in new tab</a>
+    </div>
+    <div class="pdfframe">
+      <object data="supplement.pdf" type="application/pdf">
+        <div class="fallback">Inline preview unavailable in this browser —
+          <a href="supplement.pdf">open the PDF directly</a>.</div>
+      </object>
+    </div>
+  </div>
+</section>
+
 <!-- cite -->
 <section class="doc" id="cite">
   <div class="wrap">
-    <div class="eyebrow"><span class="no">05</span> Citation</div>
+    <div class="eyebrow"><span class="no">06</span> Citation</div>
     <h2>Cite the paper</h2>
     <div class="codewrap">
       <button class="cbtn" onclick="copyBox(this)">copy</button>
@@ -466,7 +503,7 @@ python figures/make_figures.py</code></pre>
       if(links[e.target.id]) links[e.target.id].classList.add('active');
     }});
   },{rootMargin:'-45% 0px -50% 0px'});
-  ['overview','specs','methods','results','reproduce','build','cite']
+  ['overview','specs','methods','results','reproduce','build','supplement','cite']
     .forEach(function(id){ var el=document.getElementById(id); if(el) obs.observe(el); });
 </script>
 </body>
