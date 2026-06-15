@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>halfLU — Technical Reference</title>
+<meta name="description" content="halfLU: pivoting and scaling policies for half-precision (FP16) LU factorization. Technical reference / datasheet.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFAF7; --ink:#243B53; --muted:#5d6f80;
+    --primary:#1F4E79; --green:#2E7D32; --amber:#B7791F; --teal:#1B5E4B;
+    --line:rgba(36,59,83,.14); --line-strong:rgba(36,59,83,.28);
+    --card:#ffffff; --code-bg:#eef1f4; --grid:rgba(31,78,121,.06);
+    --serif:"Source Serif 4",Georgia,serif;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  html[data-theme="dark"]{
+    --paper:#141d27; --ink:#e7edf3; --muted:#9fb0c0;
+    --primary:#7db0e0; --green:#73c277; --amber:#e0a84e; --teal:#5bb89a;
+    --line:rgba(231,237,243,.13); --line-strong:rgba(231,237,243,.26);
+    --card:#1a2530; --code-bg:#0f1822; --grid:rgba(125,176,224,.07);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); line-height:1.6; font-size:16px;
+    -webkit-font-smoothing:antialiased;
+    transition:background .25s ease,color .25s ease;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 22px}
+  a{color:var(--primary); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* masthead */
+  .mast{border-bottom:1px solid var(--line)}
+  .mast-inner{display:flex; align-items:center; justify-content:space-between;
+    gap:14px; padding:12px 22px; flex-wrap:wrap}
+  .partline{display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--muted)}
+  .chip{background:var(--primary); color:#fff; padding:3px 9px; border-radius:3px;
+    font-weight:700; letter-spacing:.04em}
+  html[data-theme="dark"] .chip{color:#0f1822}
+  .partline .meta{position:relative; padding-left:14px}
+  .partline .meta::before{content:""; position:absolute; left:0; top:50%;
+    width:4px; height:4px; border-radius:50%; background:var(--line-strong);
+    transform:translateY(-50%)}
+  .themebtn{font-family:var(--mono); font-size:12px; cursor:pointer;
+    background:transparent; color:var(--ink); border:1px solid var(--line-strong);
+    border-radius:4px; padding:6px 11px}
+  .themebtn:hover{border-color:var(--primary); color:var(--primary)}
+
+  /* nav */
+  nav.doc{position:sticky; top:0; z-index:20; background:var(--paper);
+    border-bottom:1px solid var(--line)}
+  nav.doc .wrap{display:flex; gap:6px; overflow-x:auto; white-space:nowrap;
+    padding-top:8px; padding-bottom:8px; scrollbar-width:thin}
+  nav.doc a{font-family:var(--mono); font-size:12.5px; color:var(--muted);
+    padding:6px 11px; border-radius:4px; letter-spacing:.02em}
+  nav.doc a:hover{color:var(--ink); background:var(--code-bg); text-decoration:none}
+  nav.doc a.active{color:var(--primary); background:var(--code-bg)}
+
+  /* hero */
+  .hero{position:relative; padding:54px 0 40px; border-bottom:1px solid var(--line);
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:26px 26px}
+  .hero-grid{display:grid; grid-template-columns:1.15fr .85fr; gap:38px; align-items:start}
+  h1{font-family:var(--serif); font-weight:700; font-size:40px; line-height:1.12;
+    margin:6px 0 14px; letter-spacing:-.01em}
+  .lede{font-size:17px; color:var(--muted); max-width:46ch; margin:0 0 20px}
+  .badges{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:22px}
+  .badge{font-family:var(--mono); font-size:11px; letter-spacing:.05em;
+    text-transform:uppercase; padding:5px 10px; border-radius:4px;
+    border:1px solid var(--line-strong)}
+  .b-blue{color:var(--primary); border-color:var(--primary)}
+  .b-amber{color:var(--amber); border-color:var(--amber)}
+  .b-teal{color:var(--teal); border-color:var(--teal)}
+
+  /* inequality schematic */
+  .schema{margin-top:8px; padding:16px; border:1px solid var(--line);
+    border-radius:6px; background:var(--card)}
+  .schema .cap{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:10px}
+  .schema svg{width:100%; height:auto; display:block}
+  .schema text{font-family:var(--mono)}
+
+  /* spec card */
+  .spec{background:var(--card); border:1px solid var(--line-strong);
+    border-radius:6px; overflow:hidden}
+  .spec-h{font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; padding:11px 16px; color:#fff;
+    background:var(--primary)}
+  html[data-theme="dark"] .spec-h{color:#0f1822}
+  .spec-row{display:flex; justify-content:space-between; gap:14px;
+    padding:9px 16px; border-top:1px solid var(--line); font-size:13.5px}
+  .spec-row:first-of-type{border-top:none}
+  .spec-row .k{color:var(--muted)}
+  .spec-row .v{font-family:var(--mono); text-align:right; font-weight:500}
+
+  /* sections */
+  section.doc{padding:52px 0; border-bottom:1px solid var(--line);
+    scroll-margin-top:60px}
+  .eyebrow{display:flex; align-items:center; gap:10px; font-family:var(--mono);
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:14px}
+  .eyebrow .no{color:var(--primary); border:1px solid var(--line-strong);
+    border-radius:3px; padding:2px 7px}
+  h2{font-family:var(--serif); font-size:27px; font-weight:600; margin:0 0 16px;
+    letter-spacing:-.01em}
+  p.note{color:var(--muted); max-width:70ch}
+
+  /* tables */
+  .tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:6px}
+  table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:560px}
+  th,td{text-align:left; padding:11px 14px; border-bottom:1px solid var(--line)}
+  thead th{font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); background:var(--code-bg)}
+  tbody tr:last-child td{border-bottom:none}
+  td .mono,.mono{font-family:var(--mono)}
+  .tag{font-family:var(--mono); font-weight:700; color:var(--primary)}
+  sub,sup{font-family:var(--mono); font-size:.72em}
+
+  /* callouts */
+  .callout{border:1px solid var(--line-strong); border-left-width:4px;
+    border-radius:5px; padding:14px 16px; margin:16px 0; background:var(--card)}
+  .callout.amber{border-left-color:var(--amber)}
+  .callout.green{border-left-color:var(--green)}
+  .callout .lab{font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:6px}
+  .callout.amber .lab{color:var(--amber)}
+  .callout.green .lab{color:var(--green)}
+  .callout ul{margin:8px 0 0; padding-left:18px}
+  .callout li{margin:4px 0}
+
+  /* coverage bars */
+  .cov{margin:18px 0 6px}
+  .cov-row{margin:14px 0}
+  .cov-top{display:flex; justify-content:space-between; font-family:var(--mono);
+    font-size:12.5px; margin-bottom:5px}
+  .cov-top .num{font-weight:700}
+  .track{height:18px; background:var(--code-bg); border-radius:4px;
+    border:1px solid var(--line); overflow:hidden}
+  .fill{height:100%; border-radius:3px 0 0 3px}
+  .fill.base{background:var(--muted)}
+  .fill.ds{background:var(--green)}
+
+  /* code */
+  .codewrap{position:relative; margin:14px 0}
+  pre{background:var(--code-bg); border:1px solid var(--line); border-radius:6px;
+    padding:16px 16px; overflow-x:auto; margin:0;
+    font-family:var(--mono); font-size:13px; line-height:1.7}
+  pre code{font-family:inherit}
+  .cbtn{position:absolute; top:10px; right:10px; font-family:var(--mono);
+    font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    cursor:pointer; background:var(--card); color:var(--muted);
+    border:1px solid var(--line-strong); border-radius:4px; padding:4px 9px}
+  .cbtn:hover{color:var(--primary); border-color:var(--primary)}
+  .cbtn.ok{color:var(--green); border-color:var(--green)}
+  .c-com{color:var(--muted)}
+  .c-key{color:var(--primary)}
+
+  /* build grid */
+  .grid2{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+  .gcard{border:1px solid var(--line); border-radius:6px; padding:14px 16px;
+    background:var(--card)}
+  .gcard .cmd{font-family:var(--mono); font-weight:700; color:var(--primary);
+    font-size:13.5px}
+  .gcard .desc{color:var(--muted); font-size:13px; margin-top:4px}
+
+  /* footer */
+  footer{padding:40px 0 60px}
+  footer .lic{border:1px solid var(--amber); border-radius:6px; padding:16px 18px;
+    background:var(--card)}
+  footer .lic .lab{font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--amber); margin-bottom:8px}
+  footer .small{color:var(--muted); font-size:13px; margin-top:18px}
+  footer .small.mono{font-family:var(--mono); font-size:11.5px; letter-spacing:.02em}
+
+  @media (max-width:780px){
+    h1{font-size:31px}
+    .hero-grid{grid-template-columns:1fr; gap:26px}
+    .grid2{grid-template-columns:1fr}
+    .hero{padding:38px 0 30px}
+    section.doc{padding:42px 0}
+  }
+</style>
+</head>
+<body>
+
+<!-- masthead -->
+<header class="mast">
+  <div class="mast-inner">
+    <div class="partline">
+      <span class="chip">halfLU</span>
+      <span class="meta">Part No. LU-16</span>
+      <span class="meta">IEEE-754 binary16</span>
+      <span class="meta">Rev 2026.1</span>
+    </div>
+    <button class="themebtn" id="themebtn" onclick="toggleTheme()">◐ Theme</button>
+  </div>
+</header>
+
+<!-- nav -->
+<nav class="doc">
+  <div class="wrap">
+    <a href="#overview" data-sec="overview">Overview</a>
+    <a href="#specs" data-sec="specs">Specs</a>
+    <a href="#methods" data-sec="methods">Methods</a>
+    <a href="#results" data-sec="results">Results</a>
+    <a href="#reproduce" data-sec="reproduce">Reproduce</a>
+    <a href="#build" data-sec="build">Build</a>
+    <a href="#cite" data-sec="cite">Cite</a>
+  </div>
+</nav>
+
+<!-- hero / overview -->
+<section class="hero" id="overview">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow"><span class="no">00</span> Technical Reference</div>
+      <h1>Pivoting &amp; Scaling Policies for Half-Precision LU</h1>
+      <p class="lede">Lightweight pivoting and exact power-of-two scaling that keep
+        LU factorization inside the narrow FP16 dynamic range — close to partial
+        pivoting's cost, approaching complete pivoting's stability on many
+        (not all) problems.</p>
+      <div class="badges">
+        <span class="badge b-blue">Paper · TOMS 2026</span>
+        <span class="badge b-amber">License · Beerware r42</span>
+        <span class="badge b-teal">FP16 · binary16</span>
+      </div>
+
+      <div class="schema">
+        <div class="cap">Per-step growth law · one inequality, four policies</div>
+        <svg viewBox="0 0 460 96" role="img" aria-label="Growth inequality schematic">
+          <rect x="6" y="32" width="92" height="34" rx="4"
+                fill="none" stroke="var(--line-strong)"/>
+          <text x="52" y="54" text-anchor="middle" font-size="15"
+                fill="var(--ink)">L&#8342;</text>
+          <line x1="100" y1="49" x2="196" y2="49" stroke="var(--primary)"
+                stroke-width="1.4" marker-end="url(#ah)"/>
+          <text x="148" y="40" text-anchor="middle" font-size="12"
+                fill="var(--primary)">×(1+&#956;&#8342;&#945;&#8342;)</text>
+          <rect x="200" y="32" width="120" height="34" rx="4"
+                fill="none" stroke="var(--line-strong)"/>
+          <text x="260" y="54" text-anchor="middle" font-size="15"
+                fill="var(--ink)">L&#8342;&#8330;&#8321;</text>
+          <line x1="322" y1="49" x2="392" y2="49" stroke="var(--teal)"
+                stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ah2)"/>
+          <text x="430" y="54" text-anchor="middle" font-size="14"
+                fill="var(--teal)">&#961;</text>
+          <defs>
+            <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3"
+                    orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--primary)"/></marker>
+            <marker id="ah2" markerWidth="8" markerHeight="8" refX="6" refY="3"
+                    orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--teal)"/></marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <!-- spec card -->
+    <div class="spec" id="specs">
+      <div class="spec-h">At a glance — FP16 working envelope</div>
+      <div class="spec-row"><span class="k">Format</span><span class="v">binary16</span></div>
+      <div class="spec-row"><span class="k">Significand (stored / eff.)</span><span class="v">10 / 11 bits</span></div>
+      <div class="spec-row"><span class="k">Unit roundoff u</span><span class="v">2⁻¹¹ ≈ 4.88e-4</span></div>
+      <div class="spec-row"><span class="k">Normal range</span><span class="v">6.1e-5 … 6.55e4</span></div>
+      <div class="spec-row"><span class="k">Overflow ceiling</span><span class="v">65504</span></div>
+      <div class="spec-row"><span class="k">Scaling trigger t</span><span class="v">2⁻² (exact)</span></div>
+      <div class="spec-row"><span class="k">Default τ / w</span><span class="v">1.01 / 6</span></div>
+      <div class="spec-row"><span class="k">Reference HW</span><span class="v">V100 · sm_70 · CUDA 11.2</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- methods -->
+<section class="doc" id="methods">
+  <div class="wrap">
+    <div class="eyebrow"><span class="no">01</span> Method set</div>
+    <h2>Four policies, one inequality</h2>
+    <p class="note">Every rule is analyzed through the same per-step growth law
+      <span class="mono">L<sub>k+1</sub> ≤ (1 + μ<sub>k</sub>·α<sub>k</sub>)·L<sub>k</sub></span>,
+      where μ<sub>k</sub> bounds the multiplier and α<sub>k</sub> bounds the
+      pivot-row tail. Each policy is a choice of the pair (μ<sub>k</sub>, α<sub>k</sub>).</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Rule</th><th>μ&#8342;</th><th>α&#8342;</th><th>Growth bound ρ</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag">PP</span> baseline</td><td class="mono">1</td><td class="mono">1</td><td class="mono">2<sup>n−1</sup></td></tr>
+          <tr><td><span class="tag">DP</span> Delayed Pivoting</td><td class="mono">1/τ <span class="c-com">(on success)</span></td><td class="mono">1</td><td class="mono">(1+1/τ)<sup>s</sup>·2<sup>n−1−s</sup></td></tr>
+          <tr><td><span class="tag">GP</span> Geometric Pivoting</td><td class="mono">&lt; τ</td><td class="mono">√(c<sub>k</sub><sup>−2</sup>−1)</td><td class="mono">∏(1+μ<sub>k</sub>√(c<sub>k</sub><sup>−2</sup>−1))</td></tr>
+          <tr><td><span class="tag">ScaP</span> Scattered Pivoting</td><td class="mono">1</td><td class="mono">1</td><td class="mono">2<sup>n−1</sup></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout green">
+      <div class="lab">DS — Dynamic Scaling</div>
+      Panel-diagonal magnitude is used as a cheap <span class="mono">O(w)</span>
+      proxy for trailing-block overflow risk, triggering an <em>exact</em>
+      power-of-two column rescaling — exponent only, no rounding of the
+      significand while values stay in the FP16 normal range.
+    </div>
+  </div>
+</section>
+
+<!-- results -->
+<section class="doc" id="results">
+  <div class="wrap">
+    <div class="eyebrow"><span class="no">02</span> Results (honest)</div>
+    <h2>Scaling is the robustness lever; conditioning is the limit</h2>
+    <p class="note">On the SuiteSparse-derived tests at τ = 1.01, dynamic scaling
+      raises finite refined-error coverage across the matrix × method pairs:</p>
+    <div class="cov">
+      <div class="cov-row">
+        <div class="cov-top"><span>Without DS</span><span class="num">26 / 63</span></div>
+        <div class="track"><div class="fill base" style="width:41.3%"></div></div>
+      </div>
+      <div class="cov-row">
+        <div class="cov-top"><span>With DS</span><span class="num" style="color:var(--green)">55 / 63</span></div>
+        <div class="track"><div class="fill ds" style="width:87.3%"></div></div>
+      </div>
+    </div>
+    <div class="callout amber">
+      <div class="lab">Not a universal fix</div>
+      <ul>
+        <li><span class="mono">pores_2</span>, <span class="mono">west1505</span> — strongly pivot-dependent (RP / CP win).</li>
+        <li><span class="mono">b2_ss</span> — unsolved by every tested policy, with or without DS.</li>
+        <li>On dense families, DS makes most cases usable; HHP21 and near-singular families stay limited by growth / conditioning, not overflow.</li>
+      </ul>
+    </div>
+    <p class="note"><strong>Takeaway the paper argues for:</strong> expose adaptive
+      pivoting and scaling policies, not a single classical default.</p>
+  </div>
+</section>
+
+<!-- reproduce -->
+<section class="doc" id="reproduce">
+  <div class="wrap">
+    <div class="eyebrow"><span class="no">03</span> Reproduce</div>
+    <h2>From clone to figures</h2>
+    <div class="codewrap">
+      <button class="cbtn" onclick="copyBox(this)">copy</button>
+      <pre><code><span class="c-key">git</span> clone https://github.com/&lt;org&gt;/halfLU.git
+<span class="c-key">cd</span> halfLU
+python -m pip install -r requirements.txt   <span class="c-com"># numpy scipy pandas matplotlib</span>
+
+<span class="c-com"># 1. Dense synthetic sweep (GPU, native FP16)</span>
+make GPU=v100                 <span class="c-com"># builds the CUDA kernels</span>
+bash experiments/run_dense.sh <span class="c-com"># τ-sweep over n ∈ {64…2048}</span>
+
+<span class="c-com"># 2. SuiteSparse-derived tests (MATLAB FP16 simulation)</span>
+matlab -batch <span class="c-key">"cd experiments; run_sparse"</span>
+
+<span class="c-com"># 3. Regenerate every figure from results/</span>
+python figures/make_figures.py</code></pre>
+    </div>
+    <p class="note">A single driver runs any rule / regime combination:</p>
+    <div class="codewrap">
+      <button class="cbtn" onclick="copyBox(this)">copy</button>
+      <pre><code>python src/lu16_unified.py --rule GP --ds on --tau 1.01 --n 1024</code></pre>
+    </div>
+    <p class="note">Dense experiments use <strong>native FP16</strong> arithmetic on
+      V100 — not FP64 computed then down-cast. Iterative refinement uses FP64
+      residuals (50-iteration cap, stop at
+      <span class="mono">‖b−Ax̂‖∞ ≤ 1e-14</span>). Timing and batched/parallel
+      performance are deliberately out of scope.</p>
+  </div>
+</section>
+
+<!-- build -->
+<section class="doc" id="build">
+  <div class="wrap">
+    <div class="eyebrow"><span class="no">04</span> Build (GPU)</div>
+    <h2>Selectable architecture, non-breaking</h2>
+    <div class="grid2">
+      <div class="gcard"><div class="cmd">make GPU=v100</div><div class="desc">Volta → sm_70 · V100, V100S</div></div>
+      <div class="gcard"><div class="cmd">make GPU=t1000</div><div class="desc">Turing → sm_75 · T1000</div></div>
+      <div class="gcard"><div class="cmd">make GPU=a100</div><div class="desc">Ampere → sm_80 · A100</div></div>
+      <div class="gcard"><div class="cmd">make ARCH=sm_70</div><div class="desc">Explicit compute-capability override</div></div>
+      <div class="gcard"><div class="cmd">make sim</div><div class="desc">CPU / MATLAB path, no GPU required</div></div>
+      <div class="gcard"><div class="cmd">make figures</div><div class="desc">Rebuild all figures from results/</div></div>
+    </div>
+    <p class="note" style="margin-top:16px">Unknown <span class="mono">GPU=</span>
+      falls back to <span class="mono">sm_70</span> with a warning, so existing
+      builds keep working. FP16 storage needs sm_53+; tensor-core paths need sm_70+.</p>
+  </div>
+</section>
+
+<!-- cite -->
+<section class="doc" id="cite">
+  <div class="wrap">
+    <div class="eyebrow"><span class="no">05</span> Citation</div>
+    <h2>Cite the paper</h2>
+    <div class="codewrap">
+      <button class="cbtn" onclick="copyBox(this)">copy</button>
+      <pre><code>@article{sahraneshinsamani2026halfLU,
+  author  = {Sahraneshinsamani, Nima and Aliaga, Jos\'e I.
+             and Catal\'an, Sandra and Herrero, Jos\'e R.},
+  title   = {Pivoting and Scaling Policies for Half-Precision {LU} Factorization},
+  journal = {ACM Transactions on Mathematical Software},
+  year    = {2026},
+  volume  = {1}, number = {1}, articleno = {1},
+  doi     = {XXXXXXX.XXXXXXX},
+  note    = {To appear}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- footer -->
+<footer>
+  <div class="wrap">
+    <div class="lic">
+      <div class="lab">License — The Beer-Ware License (Rev. 42)</div>
+      Do whatever you want with the code, scripts, and figures; if we meet some day
+      and you think it was worth it, buy us a beer. The published article remains
+      under ACM copyright.
+    </div>
+    <p class="small"><strong>Acknowledgements.</strong> UJI authors funded by
+      PID2023-146569NB-C22 (MICIU/AEI/10.13039/501100011033, ERDF/EU); S. Catalán
+      by RYC2021-033973-I and UJI-2023-04; J. R. Herrero by PID2019-107255GB and
+      2021-SGR-01007. LLM assistance was used for language polishing and limited
+      code-debugging only; all derivations, code, results, and conclusions were
+      developed and validated by the authors.</p>
+    <p class="small mono">halfLU · Technical reference, not the published record ·
+      served via GitHub Pages from /docs</p>
+  </div>
+</footer>
+
+<script>
+  // theme (persists on real Pages; sandbox storage may be blocked — safe to ignore)
+  (function(){ try{ var s=localStorage.getItem('halflu-theme');
+    if(s){ document.documentElement.setAttribute('data-theme',s); } }catch(e){} })();
+  function toggleTheme(){
+    var h=document.documentElement;
+    var n=h.getAttribute('data-theme')==='dark'?'light':'dark';
+    h.setAttribute('data-theme',n);
+    try{ localStorage.setItem('halflu-theme',n); }catch(e){}
+  }
+  // copy
+  function copyBox(btn){
+    var pre=btn.parentNode.querySelector('code')||btn.parentNode.querySelector('pre');
+    var text=pre.innerText, lab=btn.textContent;
+    var ok=function(){ btn.textContent='copied'; btn.classList.add('ok');
+      setTimeout(function(){ btn.textContent=lab; btn.classList.remove('ok'); },1400); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok).catch(function(){fallback(text,ok);});
+    } else { fallback(text,ok); }
+  }
+  function fallback(text,ok){
+    try{ var ta=document.createElement('textarea'); ta.value=text;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok(); }catch(e){}
+  }
+  // active nav
+  var links={}; document.querySelectorAll('nav.doc a').forEach(function(a){links[a.dataset.sec]=a;});
+  var obs=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){
+      Object.values(links).forEach(function(l){l.classList.remove('active');});
+      if(links[e.target.id]) links[e.target.id].classList.add('active');
+    }});
+  },{rootMargin:'-45% 0px -50% 0px'});
+  ['overview','specs','methods','results','reproduce','build','cite']
+    .forEach(function(id){ var el=document.getElementById(id); if(el) obs.observe(el); });
+</script>
+</body>
+</html>
