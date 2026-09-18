@@ -41,25 +41,25 @@ Official open-source repository and reproducibility artifact package for the res
 ## Overview & Problem Statement
 
 Half-precision floating-point arithmetic (IEEE-754 **FP16**) delivers massive computing throughput on modern tensor accelerator hardware (e.g., NVIDIA Tensor Cores). However, its narrow dynamic range ($\approx [6.10 \times 10^{-5}, 65{,}504]$ with unit roundoff $u = 2^{-11} \approx 4.88 \times 10^{-4}$) poses severe numerical challenges for matrix factorizations:
-1. **Dynamic Range Overflow:** Classical partial pivoting ($\pp$) frequently overflows to $\pm\infty$ or $\mathrm{NaN}$ during unscaled factorization.
+1. **Dynamic Range Overflow:** Classical partial pivoting (PP) frequently overflows to $\pm\infty$ or $\mathrm{NaN}$ during unscaled factorization.
 2. **Precision Wall:** Standard backward error bounds degrade proportionally to $n \cdot u$, rendering traditional error bounds vacuous as matrix dimensions grow toward $n \ge 2{,}048$.
-3. **Heavyweight Search Bottlenecks:** Robust alternatives (such as complete pivoting $\cp$ or rook pivoting $\rp$) require extensive multi-column or 2D searches ($O(n^3)$ cost), negating the performance benefits of low precision.
+3. **Heavyweight Search Bottlenecks:** Robust alternatives (such as complete pivoting CP or rook pivoting RP) require extensive multi-column or 2D searches ($O(n^3)$ cost), negating the performance benefits of low precision.
 
 This paper establishes that **dynamic scaling and pivot selection should be treated as separate, adaptive solver policies**:
-- **Dynamic Scaling ($\ds$)** acts as the primary safeguard against dynamic range failure by keeping intermediate matrix entries bounded within the representable FP16 ceiling via exact power-of-two scaling.
-- **Lightweight Pivoting Policies ($\dep, \gp, \scap$)** intervene only when needed to control element growth and avoid suboptimal rank updates without paying the asymptotic overhead of 2D searches.
+- **Dynamic Scaling (DS)** acts as the primary safeguard against dynamic range failure by keeping intermediate matrix entries bounded within the representable FP16 ceiling via exact power-of-two scaling.
+- **Lightweight Pivoting Policies (DP, GP, ScaP)** intervene only when needed to control element growth and avoid suboptimal rank updates without paying the asymptotic overhead of 2D searches.
 
 ---
 
 ## Algorithmic Policies
 
 ### 1. Dynamic Scaling Policies
-- **Diagonal Proxy Heuristic ($\ds$):**  
+- **Diagonal Proxy Heuristic (DS):**  
   Exhaustive trailing submatrix scans cost $O(n^2)$ per panel. Instead, our proxy monitors the factored panel diagonal $d_{\max}^{(k)} = \max_{j \in \text{panel}} |a_{jj}^{(k)}|$ at negligible $O(w)$ cost. Whenever $d_{\max}^{(k)} > t = 2^{-2} = 0.25$, trailing columns are rescaled by exact power-of-two factors:
   $$s_i = 2^{\lceil \log_2(d_{\max}^{(k)} / t) \rceil}$$
   Because scaling adjusts only IEEE-754 exponent bits without mantissa rounding, normal floating-point numbers incur zero arithmetic rounding distortion.
 - **Predictive Majorant Guard:**  
-  Monitors pre-update column certificates $c_j^+ = c_j^{(k)} + |l_{ij}| \cdot \|u_{k, :}\|_1$ before rank-1 or block updates. Rescaling intervenes only when majorant ceilings threaten the overflow ceiling ($\Trank = 60{,}000$, $\Tblock = 32{,}768$).
+  Monitors pre-update column certificates $c_j^+ = c_j^{(k)} + |l_{ij}| \cdot \|u_{k, :}\|_1$ before rank-1 or block updates. Rescaling intervenes only when majorant ceilings threaten the overflow ceiling ($T_{\mathrm{rank}} = 60{,}000$, $T_{\mathrm{block}} = 32{,}768$).
 
 ### 2. Lightweight Pivoting Policies
 All rules are governed by the unified step growth inequality:
@@ -67,13 +67,13 @@ $$L_{k+1} \le (1 + \mu_k \alpha_k) L_k$$
 
 | Policy | Acronym | Trigger Mechanism | Multiplier Bound $\mu_k$ | Search Cost |
 |---|---|---|---|---|
-| **Delayed Pivoting** | $\dep$ | Triggers only when candidate ratio $M_1 / M_2 < \tau = 1.01$; scans up to $w_\ell = 6$ columns for clear pivot separation | $1/\tau$ (on success) | Panel-local $O(w_\ell n)$ |
-| **Geometric Pivoting** | $\gp$ | Triggers on near-ties ($M_1 / M_2 < \tau$); resolves ties by projecting candidate rows onto the active row tail | $< \tau$ | $O(n)$ row inner product |
-| **Scattered Pivoting** | $\scap$ | Selects among current ($k$), middle ($k + \lfloor(n-k)/2\rfloor$), and trailing ($n$) columns to maximize spatial diversity | $\le 1$ | 3 column scans |
-| **Partial Pivoting** | $\pp$ | Standard row partial pivoting baseline | $1$ | 1 column scan |
-| **Scaled Partial Pivoting** | $\scpp$ | Row maximum normalized partial pivoting | $\le 1$ | 1 column + row norms |
-| **Rook Pivoting** | $\rp$ | Alternating row and column maximum search | $\le 1$ | $1.35$ scans/step avg |
-| **Complete Pivoting** | $\cp$ | Full 2D active submatrix search | $\le 1$ | $O((n-k)^2)$ per step |
+| **Delayed Pivoting** | DP | Triggers only when candidate ratio $M_1 / M_2 < \tau = 1.01$; scans up to $w_\ell = 6$ columns for clear pivot separation | $1/\tau$ (on success) | Panel-local $O(w_\ell n)$ |
+| **Geometric Pivoting** | GP | Triggers on near-ties ($M_1 / M_2 < \tau$); resolves ties by projecting candidate rows onto the active row tail | $< \tau$ | $O(n)$ row inner product |
+| **Scattered Pivoting** | ScaP | Selects among current ($k$), middle ($k + \lfloor(n-k)/2\rfloor$), and trailing ($n$) columns to maximize spatial diversity | $\le 1$ | 3 column scans |
+| **Partial Pivoting** | PP | Standard row partial pivoting baseline | $1$ | 1 column scan |
+| **Scaled Partial Pivoting** | ScPP | Row maximum normalized partial pivoting | $\le 1$ | 1 column + row norms |
+| **Rook Pivoting** | RP | Alternating row and column maximum search | $\le 1$ | $1.35$ scans/step avg |
+| **Complete Pivoting** | CP | Full 2D active submatrix search | $\le 1$ | $O((n-k)^2)$ per step |
 
 > **Method Ordering Convention:** Throughout all scripts, figures, and tabular comparisons, methods appear in the fixed order:
 > $$\mathbf{DP \longrightarrow GP \longrightarrow ScaP \longrightarrow PP \longrightarrow ScPP \longrightarrow RP \longrightarrow CP}$$
@@ -268,17 +268,17 @@ bash scripts/run_all_figures_and_tables.sh
 ---
 
 ### Table 5: Ledger-Aware Iterative Refinement
-- **Scientific Claim:** Using the scaling ledger to un-scale intermediate triangular solves in iterative refinement ($\ir$) enables convergence to machine precision on random controls through $n = 20{,}480$, and delivers backward error $\approx 1.25 \times 10^{-10}$ on graded-wide matrices.
+- **Scientific Claim:** Using the scaling ledger to un-scale intermediate triangular solves in iterative refinement (IR) enables convergence to machine precision on random controls through $n = 20{,}480$, and delivers backward error $\approx 1.25 \times 10^{-10}$ on graded-wide matrices.
 - **Ground-Truth Data:** `data/nla_extension_configurations.csv`
 - **Output Figure:** `figures/nla_iterative_refinement.pdf`
 
 ---
 
 ### Table 7: Pivoting Execution Overheads on GPU
-- **Scientific Claim:** On Tesla V100 with scaling disabled (isolating pivot-search overhead), panel-local heuristics add minimal runtime relative to partial pivoting ($\pp$):
-  - In the **published frozen baseline** ($n=2048$), $\dep$ adds $+2.98\%$, $\gp$ adds $+2.22\%$, and $\scap$ adds $+25.29\%$. Complete pivoting ($\cp$) shows an inflated $+3017.78\%$ overhead due to host/device memory transfer synchronization.
-  - In the **post-submission Fused Device Pivot Search extension (`TABLE7_EXT`)**, device-resident 64-bit `atomicMax` key packing eliminates round-trip transfers entirely: $\cp$ overhead drops from $+3042.56\%$ to **$+4.48\%$** (an $80.8\times$ speedup), while $\scap$ drops to **$+2.49\%$**.
-  - At large dimension ($n = 60\text{Ki}$), $O(w n^2)$ search amortizes completely against $O(n^3)$ GEMM updates, dropping overheads below **$0.52\%$** for all proposed rules ($\dep +0.52\%$, $\gp +0.21\%$, $\scap +0.17\%$).
+- **Scientific Claim:** On Tesla V100 with scaling disabled (isolating pivot-search overhead), panel-local heuristics add minimal runtime relative to partial pivoting (PP):
+  - In the **published frozen baseline** ($n=2048$), DP adds $+2.98\%$, GP adds $+2.22\%$, and ScaP adds $+25.29\%$. Complete pivoting (CP) shows an inflated $+3017.78\%$ overhead due to host/device memory transfer synchronization.
+  - In the **post-submission Fused Device Pivot Search extension (`TABLE7_EXT`)**, device-resident 64-bit `atomicMax` key packing eliminates round-trip transfers entirely: CP overhead drops from $+3042.56\%$ to **$+4.48\%$** (an $80.8\times$ speedup), while ScaP drops to **$+2.49\%$**.
+  - At large dimension ($n = 60\text{Ki}$), $O(w n^2)$ search amortizes completely against $O(n^3)$ GEMM updates, dropping overheads below **$0.52\%$** for all proposed rules (DP $+0.52\%$, GP $+0.21\%$, ScaP $+0.17\%$).
 - **Ground-Truth Data:** `data/v100_pivoting_blocked_summary.csv`, `data/full_scale_search_cost_summary.csv`
 - **Fast CPU Verification:**
   ```bash
@@ -296,13 +296,13 @@ bash scripts/run_all_figures_and_tables.sh
    Vector plot: [`figures/fig2_panel_proxy_ratios.pdf`](figures/fig2_panel_proxy_ratios.pdf).
 
 2. **Figure 3: Dense Synthetic Errors (4 Rows)**  
-   Evaluates backward and forward errors across 6 baseline families and 7 pivoting rules before and after refinement ($\ir$) with and without dynamic scaling ($\ds$).  
+   Evaluates backward and forward errors across 6 baseline families and 7 pivoting rules before and after refinement (IR) with and without dynamic scaling (DS).  
    Vector plot: [`figures/dense_story_composite_4row.pdf`](figures/dense_story_composite_4row.pdf).
 
 3. **Figure 4: SuiteSparse Heatmaps & Coverage**  
-   Demonstrates that $\ds$ raises finite refined-error coverage on SuiteSparse matrices from **26/63 to 55/63** matrix-method pairs ($\tau = 1.01$).
+   Demonstrates that DS raises finite refined-error coverage on SuiteSparse matrices from **26/63 to 55/63** matrix-method pairs ($\tau = 1.01$).
 
-4. **Figure 5: Sensitivity Analysis of Delayed Pivoting ($\dep$)**  
+4. **Figure 5: Sensitivity Analysis of Delayed Pivoting (DP)**  
    Evaluates near-tie threshold $\tau \in [1.001, 1.50]$ and lookahead depth $w_\ell \le 16$ across 6,720 factorizations. Confirms that default parameters ($\tau = 1.01, w_\ell = 6$) reside on a wide, stable numerical plateau.  
    Re-run on CPU:
    ```bash
