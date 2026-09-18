@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# C / C++ / CUDA Build artifacts
+bin/
+build/
+*.o
+*.obj
+*.out
+*.app
+*.dSYM/
+*.nvvp
+
+# Benchmark temporaries
+*.log
+*.tmp
+smoke_*
+test_rendered.png
+screenshot.png
+
+# IDE and OS files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~

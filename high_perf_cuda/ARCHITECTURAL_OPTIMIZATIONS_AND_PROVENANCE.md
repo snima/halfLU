@@ -30,7 +30,7 @@ Replaced with hardware-accelerated Tensor Core GEMM via `cublasGemmEx` using `CU
 
 ```cpp
 // ==================== OPTIMIZED ENGINE (Tensor Core GEMM) ====================
-// Source: high_perf_pivoting_cuda/include/lookahead_transposed_lu.cuh
+// Source: high_perf_cuda/include/lookahead_transposed_lu.cuh
 CUBLAS_CHECK(cublasGemmEx(
     cublas_handle_gemm_, CUBLAS_OP_N, CUBLAS_OP_N,
     m_trail, n_trail, W_actual,
@@ -69,7 +69,7 @@ Adopted the **transposed matrix layout ($B = A^T$)** inspired by state-of-the-ar
 
 ```cpp
 // ==================== OPTIMIZED ROW SWAP (Vectorized float4) ====================
-// Source: high_perf_pivoting_cuda/include/transposed_hierarchical_lu.cuh
+// Source: high_perf_cuda/include/transposed_hierarchical_lu.cuh
 __global__ void batched_laswp_transposed_disjoint_kernel(
     __half* __restrict__ B, int n, int k1, int k2,
     const int* __restrict__ ipiv, int row_start, int row_end
@@ -112,7 +112,7 @@ Engineered an **in-register warp reduction** using monotonic 64-bit bit-packed k
 
 ```cpp
 // ==================== OPTIMIZED IN-REGISTER REDUCTION ====================
-// Source: high_perf_pivoting_cuda/include/pivot_kernels.cuh
+// Source: high_perf_cuda/include/pivot_kernels.cuh
 unsigned long long local_best = 0ull;
 for (int r = k + lane_id; r < n; r += 32) {
     const unsigned short bits = absolute_bits(__ldg(&matrix[col * n + r]));
@@ -157,7 +157,7 @@ The trailing GEMM is split into two operations:
 
 ```cpp
 // ==================== OPTIMIZED DUAL-STREAM LOOKAHEAD ====================
-// Source: high_perf_pivoting_cuda/include/lookahead_transposed_lu.cuh
+// Source: high_perf_cuda/include/lookahead_transposed_lu.cuh
 
 // 1. GEMM 1: Update ONLY next macro-panel columns
 CUBLAS_CHECK(cublasGemmEx(cublas_handle_gemm_, CUBLAS_OP_N, CUBLAS_OP_N,
