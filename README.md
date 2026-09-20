@@ -1,9 +1,6 @@
 # halfLU: Pivoting and Scaling Policies for Half-Precision LU Factorization
 
-[![ACM TOMS](https://img.shields.io/badge/ACM%20TOMS-2026-blue.svg)](https://dl.acm.org/journal/toms)
-[![Artifacts Available](https://img.shields.io/badge/ACM%20Artifacts-Available-brightgreen.svg)](https://www.acm.org/publications/policies/artifact-review-badging)
-[![Artifacts Evaluated - Functional](https://img.shields.io/badge/ACM%20Artifacts-Functional-brightgreen.svg)](https://www.acm.org/publications/policies/artifact-review-badging)
-[![Artifacts Evaluated - Reusable](https://img.shields.io/badge/ACM%20Artifacts-Reusable-brightgreen.svg)](https://www.acm.org/publications/policies/artifact-review-badging)
+[![Status](https://img.shields.io/badge/Status-Under_Review-orange.svg)]()
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
@@ -15,7 +12,7 @@ Official open-source repository and reproducibility artifact package for the res
 > **Authors:** [Nima Sahraneshinsamani](mailto:sahrans@uji.es)$^1$, [José I. Aliaga](mailto:aliaga@uji.es)$^1$, [Sandra Catalán](mailto:catalans@uji.es)$^1$, [José R. Herrero](mailto:josepr@ac.upc.edu)$^2$  
 > $^1$ *Departament d'Enginyeria i Ciència dels Computadors, Universitat Jaume I, Castelló de la Plana, Spain*  
 > $^2$ *Departament d'Arquitectura de Computadors, Universitat Politècnica de Catalunya, Barcelona, Spain*  
-> **Journal:** ACM Transactions on Mathematical Software (TOMS), 2026.
+> **Status:** Preprint / Under review
 
 ---
 
@@ -340,14 +337,11 @@ In adherence to open-science rigor, full transparency is provided for all audit 
 
 ```bibtex
 @article{sahraneshin2026pivoting,
-  title     = {Pivoting and Scaling Policies for Half-Precision {LU} Factorization},
-  author    = {Sahraneshinsamani, Nima and Aliaga, Jos{\'e} I. and Catal{\'a}n, Sandra and Herrero, Jos{\'e} R.},
-  journal   = {ACM Transactions on Mathematical Software},
-  year      = {2026},
-  publisher = {Association for Computing Machinery},
-  address   = {New York, NY, USA},
-  doi       = {10.1145/XXXXXXX.XXXXXXX},
-  url       = {https://github.com/snima/halfLU}
+  title  = {Pivoting and Scaling Policies for Half-Precision {LU} Factorization},
+  author = {Sahraneshinsamani, Nima and Aliaga, Jos{\'e} I. and Catal{\'a}n, Sandra and Herrero, Jos{\'e} R.},
+  note   = {Preprint / Under review},
+  year   = {2026},
+  url    = {https://github.com/snima/halfLU}
 }
 ```
 

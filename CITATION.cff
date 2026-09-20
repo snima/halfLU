@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software or benchmark artifacts, please cite our ACM TOMS paper."
+message: "If you use this software or benchmark artifacts, please cite our work (Preprint / Under review)."
 title: "Pivoting and Scaling Policies for Half-Precision LU Factorization"
 authors:
   - family-names: "Sahraneshinsamani"
@@ -19,7 +19,6 @@ authors:
     given-names: "José R."
     affiliation: "Universitat Politècnica de Catalunya, Barcelona, Spain"
     email: "josepr@ac.upc.edu"
-journal: "ACM Transactions on Mathematical Software"
 year: 2026
 license: Apache-2.0
 url: "https://github.com/snima/halfLU"
